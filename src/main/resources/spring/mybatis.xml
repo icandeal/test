@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <bean id="propertyConfig" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:properties/mysql.properties</value>
+                <value>classpath:properties/oracle.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="mysqlDataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="${mysql.driver}"/>
+        <property name="url" value="${mysql.url}"/>
+        <property name="username" value="${mysql.username}"/>
+        <property name="password" value="${mysql.password}"/>
+        <!--最大活动链接数量-->
+        <property name="maxActive" value="20"/>
+        <!--最大等待连接中的数量-->
+        <property name="maxIdle" value="3"/>
+        <property name="defaultAutoCommit" value="true"/>
+        <property name="defaultReadOnly" value="false"/>
+        <!--最大等待时间-->
+        <property name="maxWait" value="25000"/>
+    </bean>
+    <bean id="oracleDataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="${mysql.driver}"/>
+        <property name="url" value="${mysql.url}"/>
+        <property name="username" value="${mysql.username}"/>
+        <property name="password" value="${mysql.password}"/>
+        <!--最大活动链接数量-->
+        <property name="maxActive" value="20"/>
+        <!--最大等待连接中的数量-->
+        <property name="maxIdle" value="3"/>
+        <property name="defaultAutoCommit" value="true"/>
+        <property name="defaultReadOnly" value="false"/>
+        <!--最大等待时间-->
+        <property name="maxWait" value="25000"/>
+    </bean>
+
+    <bean id="dataSource" class="com.util.datasource.DataSourceConfig">
+        <property name="targetDataSources">
+            <map key-type="java.lang.String">
+                <entry key="mysql" value-ref="mysqlDataSource"/>
+                <entry key="oracle" value-ref="oracleDataSource"/>
+            </map>
+        </property>
+
+        <property name="defaultTargetDataSource" ref="mysqlDataSource"/>
+    </bean>
+
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:config/mybatis-config.xml"/>
+        <property name="mapperLocations" value="classpath:mapper/*Mapper.xml"/>
+    </bean>
+
+    <bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg name="sqlSessionFactory" ref="sqlSessionFactory"/>
+    </bean>
+
+    <!-- spring事务管理类 -->
+    <bean name="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 加入一个事务，事务的bean为transactionManager -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+    <!-- 注解切面，加入事务处理 -->
+    <aop:config>
+        <aop:pointcut id="serviceExecute" expression="execution(public * com.service.impl.*.*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="serviceExecute"/>
+    </aop:config>
+
+    <!-- 自动扫描Mapper DAO java接口 -->
+    <bean id="mapperScanner" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.dao.mapper;com.dao.impl"/>
+    </bean>
+
+    <!--数据源配置方法一：不使用到连接池-->
+    <!--
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+           <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+           <property name="url" value="jdbc:mysql://localhost:3306/easy"/>
+           <property name="username" value="root"/>
+           <property name="password" value="admin"/>
+    </bean>
+    -->
+
+    <!--数据源配置方法二:通过JNDI命名空间，利用服务器提供数据源,需要在服务器配置文件中进行数据源配置-->
+    <!--
+    <bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+           <property name="jndiName" value="java:comp/env/jdbc/easy_db"/>
+    </bean>
+    -->
+
+    <!--  配置文件操作  -->
+    <!--<bean id="propertyConfig" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">-->
+    <!--<property name="locations">-->
+    <!--<list>-->
+    <!--<value>classpath:properties/mysql.properties</value>-->
+    <!--<value>classpath:properties/oracle.properties</value>-->
+    <!--</list>-->
+    <!--</property>-->
+    <!--<property name="location">
+           <value></value>
+    </property>-->
+    <!--</bean>-->
+
+    <!--数据源配置方法三：通过依赖对象池机制产生的数据库连接池-->
+    <!--<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">-->
+    <!--<property name="driverClassName" value="${mysql.driver}"/>-->
+    <!--<property name="url" value="${mysql.url}"/>-->
+    <!--<property name="username" value="${mysql.username}"/>-->
+    <!--<property name="password" value="${mysql.password}"/>-->
+    <!--&lt;!&ndash;最大活动链接数量&ndash;&gt;-->
+    <!--<property name="maxActive" value="20"/>-->
+    <!--&lt;!&ndash;最大等待连接中的数量&ndash;&gt;-->
+    <!--<property name="maxIdle" value="3"/>-->
+    <!--<property name="defaultAutoCommit" value="true"/>-->
+    <!--<property name="defaultReadOnly" value="false"/>-->
+    <!--&lt;!&ndash;最大等待时间&ndash;&gt;-->
+    <!--<property name="maxWait" value="25000"/>-->
+    <!--</bean>-->
+</beans>
